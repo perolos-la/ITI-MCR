@@ -1,10 +1,10 @@
-# IBI-MCR: An Effective Infrequent Trace Identification Method Based on Multi-perspective Conformance Rules
+# ITI-MCR: An Effective Infrequent Trace Identification Method Based on Multi-perspective Conformance Rules
 
 This repository contains the official source code implementation for the paper *"An Effective Infrequent Trace Identification Method Based on Multi-perspective Conformance Rules"*.
 
 
 
-In process mining, infrequent traces are often misclassified as noise, causing information loss and model distortion. To address this issue, an identification method based on multi-perspective conformance rules (IBI-MCR) is proposed. The method extracts rules from high-frequency traces and evaluates infrequent traces from multiple perspectives. Finally, the accurate identification of effective infrequent traces with business value is achieved based on a weighted combination of the conformance evaluations.
+In process mining, infrequent traces are often misclassified as noise, causing information loss and model distortion. To address this issue, an identification method based on multi-perspective conformance rules (ITI-MCR) is proposed. The method extracts rules from high-frequency traces and evaluates infrequent traces from multiple perspectives. Finally, the accurate identification of effective infrequent traces with business value is achieved based on a weighted combination of the conformance evaluations.
 
 
 
