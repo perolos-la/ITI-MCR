@@ -12,7 +12,7 @@ In process mining, infrequent traces are often misclassified as noise, causing i
 
 The repository is organized into the following main directories:
 
-- **`code/`**: Contains the core algorithmic implementation of the IBI-MCR method.
+- **`code/`**: Contains the core algorithmic implementation of the ITI-MCR method.
 
   - `Log Splitting.py`: Taking the original event log as input, the original event log is divided into a high-frequency log and a low-frequency log based on K-means clustering.
 
