@@ -14,10 +14,9 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 
-# Default file paths
-HIGH_LOG_PATH = "D:\\pythonProject\\code\\high_log.xes"
-LOW_LOG_PATH = "D:\\pythonProject\\code\\low_log.xes"
-OUTPUT_DIR = "D:\\pythonProject\\code"
+HIGH_LOG_PATH = "D:\high_log.xes"
+LOW_LOG_PATH = "D:\low_log.xes"
+OUTPUT_DIR = "D:\code"
 
 def compute_dependency_matrix(high_log_path, output_dir):
     log = xes_importer.apply(high_log_path)
@@ -162,37 +161,9 @@ def compute_traces_time_dimension_score(output_dir, penalty_score, low_log_path)
         results.append({"trace_id": trace_id, "time_dimension_score": score, "num_pairs": len(deviations)})
     pd.DataFrame(results).to_excel(os.path.join(output_dir, "时间维度分数.xlsx"), index=False)
 
-
-# def combine_all_three_scores(w_control, w_org, w_time, output_dir, low_log_path):
-#     df_control = pd.read_excel(os.path.join(output_dir, "控制维度分数.xlsx"))
-#     df_time = pd.read_excel(os.path.join(output_dir, "时间维度分数.xlsx"))
-#     df_org = pd.read_excel(os.path.join(output_dir, "组织维度分数.xlsx"))
-#     df = df_control.merge(df_time, on="trace_id").merge(df_org, on="trace_id")
-#     log = xes_importer.apply(low_log_path)
-#     noise_traces = {str(trace.attributes.get('concept:name', f'Trace-{id(trace)}')) for trace in log if any('noise:added' in event and str(event['noise:added']).lower() == 'true' for event in trace)}
-#     df.insert(df.columns.get_loc("trace_id") + 1, "包含噪声事件", df["trace_id"].astype(str).isin(noise_traces).map({True: '是', False: ''}))
-#     scaler = MinMaxScaler()
-#     df["time_score_norm"] = 1 - scaler.fit_transform(df[["time_dimension_score"]])
-#     df["org_score_norm"] = df["deviation"]
-#     df["control_score_norm"] = df["conformance_ratio"]
-#     df["final_score"] = (w_control * df["control_score_norm"] + w_time * df["time_score_norm"] + w_org * df["org_score_norm"])
-#     cols = ["trace_id", "包含噪声事件", "control_score_norm", "time_dimension_score", "time_score_norm", "deviation", "org_score_norm", "final_score"]
-#     df[cols].to_excel(os.path.join(output_dir, "维度综合评分_三视角.xlsx"), index=False)
-
 def combine_all_three_scores(w_control, w_org, w_time, output_dir, low_log_path):
-    """
-    合并三个维度的分数，并计算多种权重组合下的综合评分。
-
-    参数:
-    w_control (float): 控制流视角的自定义权重
-    w_org (float): 组织视角的自定义权重
-    w_time (float): 时间视角的自定义权重
-    output_dir (str): 包含输入Excel文件并用于保存输出的目录
-    low_log_path (str): 低频日志的.xes文件路径，用于识别噪声
-    """
 
     print("开始合并分数...")
-    # --- 1. 加载和合并数据 ---
     try:
         df_control = pd.read_excel(os.path.join(output_dir, "控制维度分数.xlsx"))
         df_time = pd.read_excel(os.path.join(output_dir, "时间维度分数.xlsx"))
@@ -203,8 +174,6 @@ def combine_all_three_scores(w_control, w_org, w_time, output_dir, low_log_path)
         return
 
     df = df_control.merge(df_time, on="trace_id").merge(df_org, on="trace_id")
-
-    # --- 2. 加载日志并识别噪声轨迹 ---
     print(f"正在加载日志以识别噪声: {low_log_path}")
     try:
         log = xes_importer.apply(low_log_path)
@@ -220,70 +189,32 @@ def combine_all_three_scores(w_control, w_org, w_time, output_dir, low_log_path)
     df.insert(df.columns.get_loc("trace_id") + 1, "包含噪声事件",
               df["trace_id"].astype(str).isin(noise_traces).map({True: '是', False: ''}))
 
-    # --- 3. 规范化各维度分数 ---
-    # 确保 'conformance_ratio' 和 'deviation' 存在
     if "conformance_ratio" not in df.columns or "deviation" not in df.columns:
         print("错误：输入的Excel文件中缺少 'conformance_ratio' 或 'deviation' 列。")
         return
 
     scaler = MinMaxScaler()
-    # 时间维度：分数越低越好，因此用 1- 规范化
     df["time_score_norm"] = 1 - scaler.fit_transform(df[["time_dimension_score"]])
-    # 组织维度：直接使用 'deviation' 作为分数
     df["org_score_norm"] = df["deviation"]
-
-    # 控制流维度：直接使用 'conformance_ratio' 作为分数
     df["control_score_norm"] = df["conformance_ratio"]
-
-    # --- 4. [核心修改] 计算所有评分组合 ---
     print("正在计算所有评分组合...")
     c_score = df["control_score_norm"]
     o_score = df["org_score_norm"]
     t_score = df["time_score_norm"]
-
-    # 单视角
-    df["score_control_only"] = c_score
-    df["score_org_only"] = o_score
-    df["score_time_only"] = t_score
-
-    # 双视角 (w=0.5)
-    df["score_control_org"] = (0.5 * c_score) + (0.5 * o_score)
-    df["score_control_time"] = (0.5 * c_score) + (0.5 * t_score)
-    df["score_org_time"] = (0.5 * o_score) + (0.5 * t_score)
-
-    # 三视角 (使用传入的自定义权重)
     df["final_score"] = (w_control * c_score) + (w_org * o_score) + (w_time * t_score)
-
-    # --- 5. [核心修改] 定义最终输出列 ---
     cols = [
-        # 基础信息
         "trace_id",
         "包含噪声事件",
-
-        # 规范化后的基础分数 (用于分析)
         "control_score_norm",
         "org_score_norm",
         "time_score_norm",
-
-        # 原始分数 (用于参考)
         "conformance_ratio",
         "deviation",
         "time_dimension_score",
-
-        # 所有计算出的综合评分
-        "score_control_only",
-        "score_org_only",
-        "score_time_only",
-        "score_control_org",
-        "score_control_time",
-        "score_org_time",
         "final_score"
     ]
 
-    # 确保所有列都存在，以防万一
     final_cols = [col for col in cols if col in df.columns]
-
-    # --- 6. [核心修改] 保存到新的Excel文件 ---
     output_filename = os.path.join(output_dir, "维度综合评分_三视角.xlsx")
 
     try:
@@ -328,9 +259,8 @@ def merge_and_export_logs(high_log_path, output_dir):
 
 def main():
     root = tk.Tk()
-    root.title("多维度？!")
+    root.title("ITI-MCR")
 
-    # Parameter Inputs
     params = [
         ("dep_threshold:", "50", "Direct Follow Threshold"),
         ("causal_threshold:", "0.9", "Causal Probability Threshold"),
@@ -349,7 +279,6 @@ def main():
         entry.insert(0, default)
         entries[label.strip(":")] = entry
 
-    # File Selection
     tk.Label(root, text="高频日志路径:").grid(row=8, column=0, padx=5, pady=5)
     high_log_entry = tk.Entry(root, width=50)
     high_log_entry.grid(row=8, column=1, padx=5, pady=5)
@@ -368,7 +297,6 @@ def main():
     output_dir_entry.insert(0, OUTPUT_DIR)
     tk.Button(root, text="Browse", command=lambda: select_directory(output_dir_entry)).grid(row=10, column=2)
 
-    # Buttons
     tk.Button(root, text="Run！！！", command=lambda: run_analysis(
         int(entries["dep_threshold"].get()), float(entries["causal_threshold"].get()),
         float(entries["MIN_SHARE"].get()), float(entries["PENALTY_SCORE"].get()),
