@@ -39,5 +39,5 @@ The experiments were conducted using the following environment configuration:
 
 ## 🚀 Usage
 
-1. **Log Partitioning:** Run `code/Log Splitting.py` to cluster the initial event log into high-frequency and low-frequency trace logs.
+1. **Log Splitting:** Run `code/Log Splitting.py` to cluster the initial event log into high-frequency and low-frequency trace logs.
 2. **Rule Extraction & Trace Evaluation:** Run `code/RuleExtraction&TraceEvaluation.py`. This script will process the split logs, construct multi-perspective (control-flow, organizational, time) conformance rules from the high-frequency log, and output a comprehensive score for traces in the low-frequency log to identify effective infrequent behaviors.
